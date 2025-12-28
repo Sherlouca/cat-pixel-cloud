@@ -181,7 +181,7 @@ export default function HomeScreen() {
       <View className="mb-4">
         {/* App Title */}
         <View className="px-4 pt-2 pb-4">
-          <Text className="text-3xl font-bold text-foreground">🐱 Cats Wallpaper</Text>
+          <Text className="text-3xl font-bold text-foreground">🐱 Cat Pixel Cloud</Text>
           <Text className="text-sm text-muted mt-1">
             Os melhores papéis de parede de gatos
           </Text>

@@ -130,8 +130,8 @@ export default function GenerateScreen() {
       if (Platform.OS === "web") {
         if (navigator.share) {
           await navigator.share({
-            title: "Cats Wallpaper - IA",
-            text: `🐱 Wallpaper de gato criado com IA!\n\n"${prompt}"\n\nCriado com Cats Wallpaper App`,
+            title: "Cat Pixel Cloud - IA",
+            text: `🐱 Wallpaper de gato criado com IA!\n\n"${prompt}"\n\nCriado com Cat Pixel Cloud`,
             url: generatedImage,
           });
         } else {
