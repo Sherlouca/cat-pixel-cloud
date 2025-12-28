@@ -53,3 +53,11 @@
 
 ## Novas Funcionalidades
 - [x] Botão de compartilhamento de wallpapers gerados por IA nas redes sociais
+
+## Modelo Freemium
+- [x] Sistema de gerenciamento de assinatura premium
+- [x] Store de premium com persistência
+- [x] Limites para usuários gratuitos (3 gerações IA/dia, 20 wallpapers/dia)
+- [x] Tela de assinatura premium (Cats Premium)
+- [x] Integração de anúncios (AdMob) para versão gratuita
+- [x] Paywall para recursos premium

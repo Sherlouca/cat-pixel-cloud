@@ -87,6 +87,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="wallpaper/[id]" options={{ presentation: "modal" }} />
+            <Stack.Screen name="premium" options={{ presentation: "modal" }} />
             <Stack.Screen name="oauth/callback" />
           </Stack>
           <StatusBar style="auto" />

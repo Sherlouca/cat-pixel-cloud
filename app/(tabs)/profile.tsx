@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   ScrollView,
   Text,
@@ -9,7 +9,7 @@ import {
   Platform,
   Linking,
 } from "react-native";
-import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
 import { ScreenContainer } from "@/components/screen-container";
@@ -20,6 +20,7 @@ import { getLoginUrl } from "@/constants/oauth";
 import * as WebBrowser from "expo-web-browser";
 import { useWallpaperStore } from "@/stores/wallpaper-store";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { usePremiumStore, FREE_LIMITS } from "@/stores/premium-store";
 
 interface SettingItemProps {
   icon: React.ComponentProps<typeof IconSymbol>["name"];
@@ -27,9 +28,11 @@ interface SettingItemProps {
   subtitle?: string;
   onPress?: () => void;
   rightElement?: React.ReactNode;
+  badge?: string;
+  badgeColor?: string;
 }
 
-function SettingItem({ icon, title, subtitle, onPress, rightElement }: SettingItemProps) {
+function SettingItem({ icon, title, subtitle, onPress, rightElement, badge, badgeColor }: SettingItemProps) {
   const colors = useColors();
 
   return (
@@ -63,9 +66,26 @@ function SettingItem({ icon, title, subtitle, onPress, rightElement }: SettingIt
         <IconSymbol name={icon} size={20} color={colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "500" }}>
-          {title}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "500" }}>
+            {title}
+          </Text>
+          {badge && (
+            <View
+              style={{
+                backgroundColor: badgeColor || colors.primary,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 10,
+                marginLeft: 8,
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "700" }}>
+                {badge}
+              </Text>
+            </View>
+          )}
+        </View>
         {subtitle && (
           <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
             {subtitle}
@@ -79,12 +99,25 @@ function SettingItem({ icon, title, subtitle, onPress, rightElement }: SettingIt
 
 export default function ProfileScreen() {
   const colors = useColors();
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const { user, isAuthenticated, loading, logout } = useAuth();
   const { favorites } = useWallpaperStore();
+  const { 
+    isPremium, 
+    subscriptionPlan, 
+    subscriptionExpiry, 
+    loadPremiumStatus,
+    getRemainingAIGenerations,
+    getRemainingWallpaperViews,
+  } = usePremiumStore();
 
   const [isDarkMode, setIsDarkMode] = useState(colorScheme === "dark");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  useEffect(() => {
+    loadPremiumStatus();
+  }, [loadPremiumStatus]);
 
   const handleLogin = useCallback(async () => {
     if (Platform.OS === "ios" || Platform.OS === "android") {
@@ -92,10 +125,8 @@ export default function ProfileScreen() {
     }
     const loginUrl = getLoginUrl();
     if (Platform.OS === "web") {
-      // For web, redirect to login page
       window.location.href = loginUrl;
     } else {
-      // For native, open in-app browser
       await WebBrowser.openAuthSessionAsync(loginUrl);
     }
   }, []);
@@ -109,15 +140,21 @@ export default function ProfileScreen() {
 
   const handleToggleDarkMode = useCallback((value: boolean) => {
     setIsDarkMode(value);
-    // Note: Theme switching would require updating ThemeProvider
   }, []);
 
   const handleToggleNotifications = useCallback((value: boolean) => {
     setNotificationsEnabled(value);
   }, []);
 
-  const handleOpenPexels = useCallback(() => {
-    Linking.openURL("https://www.pexels.com");
+  const handleOpenPremium = useCallback(() => {
+    if (Platform.OS === "ios" || Platform.OS === "android") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push("/premium");
+  }, [router]);
+
+  const handleOpenTheCatAPI = useCallback(() => {
+    Linking.openURL("https://thecatapi.com");
   }, []);
 
   if (loading) {
@@ -140,6 +177,84 @@ export default function ProfileScreen() {
         <View className="pt-2 pb-6">
           <Text className="text-3xl font-bold text-foreground">👤 Perfil</Text>
         </View>
+
+        {/* Premium Card */}
+        <Pressable
+          onPress={handleOpenPremium}
+          style={({ pressed }) => [
+            {
+              padding: 20,
+              borderRadius: 16,
+              marginBottom: 16,
+              backgroundColor: isPremium ? colors.primary : `${colors.primary}15`,
+              borderWidth: isPremium ? 0 : 1,
+              borderColor: colors.primary,
+              opacity: pressed ? 0.9 : 1,
+            },
+          ]}
+        >
+          {isPremium ? (
+            <View>
+              <View className="flex-row items-center mb-2">
+                <Text className="text-2xl mr-2">👑</Text>
+                <Text className="text-xl font-bold text-white">Cats Premium</Text>
+              </View>
+              <Text className="text-white opacity-90">
+                Plano {subscriptionPlan === "monthly" ? "Mensal" : "Anual"} • Válido até{" "}
+                {subscriptionExpiry
+                  ? new Date(subscriptionExpiry).toLocaleDateString("pt-BR")
+                  : "-"}
+              </Text>
+              <View className="flex-row items-center mt-3">
+                <Text className="text-white font-medium">Gerenciar assinatura</Text>
+                <IconSymbol name="chevron.right" size={16} color="#FFFFFF" />
+              </View>
+            </View>
+          ) : (
+            <View>
+              <View className="flex-row items-center mb-2">
+                <Text className="text-2xl mr-2">👑</Text>
+                <Text className="text-xl font-bold" style={{ color: colors.primary }}>
+                  Seja Premium
+                </Text>
+              </View>
+              <Text className="text-muted mb-1">
+                Desbloqueie gerações ilimitadas de IA, qualidade 4K e muito mais!
+              </Text>
+              <Text className="text-sm text-muted">
+                A partir de R$ 4,90/mês
+              </Text>
+              <View className="flex-row items-center mt-3">
+                <Text style={{ color: colors.primary, fontWeight: "600" }}>Ver planos</Text>
+                <IconSymbol name="chevron.right" size={16} color={colors.primary} />
+              </View>
+            </View>
+          )}
+        </Pressable>
+
+        {/* Usage Stats (for free users) */}
+        {!isPremium && (
+          <View
+            className="p-4 rounded-xl mb-6"
+            style={{ backgroundColor: colors.surface }}
+          >
+            <Text className="text-sm font-semibold text-foreground mb-3">
+              Uso Diário (Gratuito)
+            </Text>
+            <View className="flex-row justify-between mb-2">
+              <Text className="text-muted">Gerações de IA</Text>
+              <Text className="text-foreground font-medium">
+                {FREE_LIMITS.AI_GENERATIONS_PER_DAY - getRemainingAIGenerations()}/{FREE_LIMITS.AI_GENERATIONS_PER_DAY}
+              </Text>
+            </View>
+            <View className="flex-row justify-between">
+              <Text className="text-muted">Wallpapers visualizados</Text>
+              <Text className="text-foreground font-medium">
+                {FREE_LIMITS.WALLPAPERS_PER_DAY - getRemainingWallpaperViews()}/{FREE_LIMITS.WALLPAPERS_PER_DAY}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* User Card */}
         <View
@@ -225,6 +340,15 @@ export default function ProfileScreen() {
         </Text>
 
         <SettingItem
+          icon="star.fill"
+          title="Cats Premium"
+          subtitle={isPremium ? "Gerenciar assinatura" : "Desbloqueie todos os recursos"}
+          badge={isPremium ? "ATIVO" : ""}
+          badgeColor={colors.success}
+          onPress={handleOpenPremium}
+        />
+
+        <SettingItem
           icon="moon.fill"
           title="Modo Escuro"
           subtitle="Tema escuro para seus olhos"
@@ -264,10 +388,10 @@ export default function ProfileScreen() {
         />
 
         <SettingItem
-          icon="photo.fill"
-          title="Fotos por Pexels"
-          subtitle="Imagens de alta qualidade gratuitas"
-          onPress={handleOpenPexels}
+          icon="cat.fill"
+          title="Fotos por The Cat API"
+          subtitle="Imagens de gatos gratuitas"
+          onPress={handleOpenTheCatAPI}
         />
 
         {/* Logout Button */}

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   ScrollView,
   Text,
@@ -11,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
@@ -19,6 +20,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
+import { usePremiumStore, FREE_LIMITS } from "@/stores/premium-store";
 
 const EXAMPLE_PROMPTS = [
   "Gato astronauta no espaço",
@@ -31,17 +33,47 @@ const EXAMPLE_PROMPTS = [
 
 export default function GenerateScreen() {
   const colors = useColors();
+  const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { 
+    isPremium, 
+    canGenerateAI, 
+    getRemainingAIGenerations, 
+    incrementAIGeneration,
+    loadPremiumStatus,
+    isLoading: isPremiumLoading 
+  } = usePremiumStore();
+
   const generateMutation = trpc.generate.create.useMutation();
+
+  // Load premium status on mount
+  useEffect(() => {
+    loadPremiumStatus();
+  }, [loadPremiumStatus]);
+
+  const remainingGenerations = getRemainingAIGenerations();
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       setError("Digite uma descrição para o wallpaper");
+      return;
+    }
+
+    // Check if user can generate
+    if (!canGenerateAI()) {
+      Alert.alert(
+        "Limite Atingido",
+        `Você atingiu o limite de ${FREE_LIMITS.AI_GENERATIONS_PER_DAY} gerações por dia.\n\nAssine o Premium para gerações ilimitadas!`,
+        [
+          { text: "Depois", style: "cancel" },
+          { text: "Ver Premium", onPress: () => router.push("/premium") },
+        ]
+      );
       return;
     }
 
@@ -54,6 +86,21 @@ export default function GenerateScreen() {
     setGeneratedImage(null);
 
     try {
+      // Increment usage before generating
+      const allowed = await incrementAIGeneration();
+      if (!allowed) {
+        Alert.alert(
+          "Limite Atingido",
+          "Assine o Premium para gerações ilimitadas!",
+          [
+            { text: "Depois", style: "cancel" },
+            { text: "Ver Premium", onPress: () => router.push("/premium") },
+          ]
+        );
+        setIsGenerating(false);
+        return;
+      }
+
       const result = await generateMutation.mutateAsync({
         prompt: prompt.trim(),
       });
@@ -72,7 +119,7 @@ export default function GenerateScreen() {
     } finally {
       setIsGenerating(false);
     }
-  }, [prompt, generateMutation]);
+  }, [prompt, generateMutation, canGenerateAI, incrementAIGeneration, router]);
 
   const handleShare = useCallback(async () => {
     if (!generatedImage) return;
@@ -81,7 +128,6 @@ export default function GenerateScreen() {
 
     try {
       if (Platform.OS === "web") {
-        // Web sharing using Web Share API
         if (navigator.share) {
           await navigator.share({
             title: "Cats Wallpaper - IA",
@@ -89,16 +135,13 @@ export default function GenerateScreen() {
             url: generatedImage,
           });
         } else {
-          // Fallback: copy link to clipboard
           await navigator.clipboard.writeText(generatedImage);
           Alert.alert("Link copiado!", "O link do wallpaper foi copiado para a área de transferência.");
         }
       } else {
-        // Mobile sharing
         const isAvailable = await Sharing.isAvailableAsync();
         
         if (isAvailable) {
-          // Download image to local cache first
           const filename = `cat_wallpaper_${Date.now()}.jpg`;
           const localUri = (FileSystem.cacheDirectory || '') + filename;
           
@@ -129,7 +172,6 @@ export default function GenerateScreen() {
       }
     } catch (err) {
       console.error("Share error:", err);
-      // User cancelled sharing - not an error
       if ((err as Error).message !== "Share was cancelled") {
         Alert.alert("Erro", "Não foi possível compartilhar o wallpaper.");
       }
@@ -162,11 +204,60 @@ export default function GenerateScreen() {
         >
           {/* Header */}
           <View className="pt-2 pb-4">
-            <Text className="text-3xl font-bold text-foreground">✨ Criar Wallpaper</Text>
+            <View className="flex-row justify-between items-center">
+              <Text className="text-3xl font-bold text-foreground">✨ Criar Wallpaper</Text>
+              {isPremium && (
+                <View
+                  className="px-3 py-1 rounded-full"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  <Text className="text-white text-xs font-bold">PREMIUM</Text>
+                </View>
+              )}
+            </View>
             <Text className="text-sm text-muted mt-1">
               Use IA para criar wallpapers únicos de gatos
             </Text>
           </View>
+
+          {/* Usage Counter (for free users) */}
+          {!isPremium && !isPremiumLoading && (
+            <Pressable
+              onPress={() => router.push("/premium")}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: remainingGenerations <= 1 ? `${colors.warning}20` : colors.surface,
+                  borderRadius: 12,
+                  padding: 12,
+                  marginBottom: 16,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <View className="flex-row items-center">
+                <IconSymbol 
+                  name="sparkles" 
+                  size={20} 
+                  color={remainingGenerations <= 1 ? colors.warning : colors.primary} 
+                />
+                <Text 
+                  className="ml-2 font-medium"
+                  style={{ color: remainingGenerations <= 1 ? colors.warning : colors.foreground }}
+                >
+                  {remainingGenerations} {remainingGenerations === 1 ? "geração restante" : "gerações restantes"} hoje
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text style={{ color: colors.primary, fontSize: 13 }}>
+                  Seja Premium
+                </Text>
+                <IconSymbol name="chevron.right" size={16} color={colors.primary} />
+              </View>
+            </Pressable>
+          )}
 
           {/* Input Section */}
           <View
@@ -294,7 +385,7 @@ export default function GenerateScreen() {
               </View>
               <View
                 className="rounded-2xl overflow-hidden"
-                style={{ aspectRatio: 0.5625 }} // 9:16 aspect ratio
+                style={{ aspectRatio: 0.5625 }}
               >
                 <Image
                   source={{ uri: generatedImage }}
@@ -306,7 +397,6 @@ export default function GenerateScreen() {
               
               {/* Action Buttons */}
               <View className="flex-row mt-4 gap-3">
-                {/* Download Button */}
                 <Pressable
                   onPress={() => {
                     // TODO: Implement download
@@ -330,14 +420,13 @@ export default function GenerateScreen() {
                   </Text>
                 </Pressable>
 
-                {/* Share Button */}
                 <Pressable
                   onPress={handleShare}
                   disabled={isSharing}
                   style={({ pressed }) => [
                     {
                       flex: 1,
-                      backgroundColor: "#1DA1F2", // Twitter blue for social feel
+                      backgroundColor: "#1DA1F2",
                       paddingVertical: 14,
                       borderRadius: 12,
                       alignItems: "center",
@@ -360,7 +449,6 @@ export default function GenerateScreen() {
                 </Pressable>
               </View>
 
-              {/* Regenerate Button */}
               <Pressable
                 onPress={handleGenerate}
                 disabled={isGenerating}
@@ -385,9 +473,42 @@ export default function GenerateScreen() {
             </View>
           )}
 
+          {/* Premium Upsell Card (for free users) */}
+          {!isPremium && !isPremiumLoading && (
+            <Pressable
+              onPress={() => router.push("/premium")}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: `${colors.primary}15`,
+                  borderRadius: 16,
+                  padding: 16,
+                  borderWidth: 1,
+                  borderColor: colors.primary,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <View className="flex-row items-center mb-2">
+                <Text className="text-lg mr-2">👑</Text>
+                <Text className="text-lg font-bold" style={{ color: colors.primary }}>
+                  Cats Premium
+                </Text>
+              </View>
+              <Text className="text-sm text-muted leading-5">
+                Desbloqueie gerações ilimitadas, qualidade 4K e muito mais!
+              </Text>
+              <View className="flex-row items-center mt-3">
+                <Text style={{ color: colors.primary, fontWeight: "600" }}>
+                  Ver planos
+                </Text>
+                <IconSymbol name="chevron.right" size={16} color={colors.primary} />
+              </View>
+            </Pressable>
+          )}
+
           {/* Info Card */}
           <View
-            className="p-4 rounded-xl"
+            className="p-4 rounded-xl mt-4"
             style={{ backgroundColor: colors.surface }}
           >
             <Text className="text-sm text-muted leading-5">
