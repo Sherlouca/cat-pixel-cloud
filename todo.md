@@ -50,3 +50,6 @@
 ## Documentação
 - [x] Instruções para Play Store
 - [ ] README do projeto
+
+## Novas Funcionalidades
+- [x] Botão de compartilhamento de wallpapers gerados por IA nas redes sociais

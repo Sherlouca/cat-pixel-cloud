@@ -8,9 +8,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system/legacy";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -31,6 +34,7 @@ export default function GenerateScreen() {
   const [prompt, setPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const generateMutation = trpc.generate.create.useMutation();
@@ -69,6 +73,70 @@ export default function GenerateScreen() {
       setIsGenerating(false);
     }
   }, [prompt, generateMutation]);
+
+  const handleShare = useCallback(async () => {
+    if (!generatedImage) return;
+
+    setIsSharing(true);
+
+    try {
+      if (Platform.OS === "web") {
+        // Web sharing using Web Share API
+        if (navigator.share) {
+          await navigator.share({
+            title: "Cats Wallpaper - IA",
+            text: `🐱 Wallpaper de gato criado com IA!\n\n"${prompt}"\n\nCriado com Cats Wallpaper App`,
+            url: generatedImage,
+          });
+        } else {
+          // Fallback: copy link to clipboard
+          await navigator.clipboard.writeText(generatedImage);
+          Alert.alert("Link copiado!", "O link do wallpaper foi copiado para a área de transferência.");
+        }
+      } else {
+        // Mobile sharing
+        const isAvailable = await Sharing.isAvailableAsync();
+        
+        if (isAvailable) {
+          // Download image to local cache first
+          const filename = `cat_wallpaper_${Date.now()}.jpg`;
+          const localUri = (FileSystem.cacheDirectory || '') + filename;
+          
+          const downloadResult = await FileSystem.downloadAsync(
+            generatedImage,
+            localUri
+          );
+
+          if (downloadResult.status === 200) {
+            await Sharing.shareAsync(downloadResult.uri, {
+              mimeType: "image/jpeg",
+              dialogTitle: "Compartilhar Wallpaper",
+              UTI: "public.jpeg",
+            });
+
+            if (Platform.OS === "ios" || Platform.OS === "android") {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+          } else {
+            throw new Error("Failed to download image");
+          }
+        } else {
+          Alert.alert(
+            "Compartilhamento indisponível",
+            "O compartilhamento não está disponível neste dispositivo."
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Share error:", err);
+      // User cancelled sharing - not an error
+      if ((err as Error).message !== "Share was cancelled") {
+        Alert.alert("Erro", "Não foi possível compartilhar o wallpaper.");
+      }
+    } finally {
+      setIsSharing(false);
+    }
+  }, [generatedImage, prompt]);
 
   const handleExamplePress = useCallback((example: string) => {
     setPrompt(example);
@@ -235,7 +303,10 @@ export default function GenerateScreen() {
                   transition={300}
                 />
               </View>
+              
+              {/* Action Buttons */}
               <View className="flex-row mt-4 gap-3">
+                {/* Download Button */}
                 <Pressable
                   onPress={() => {
                     // TODO: Implement download
@@ -258,28 +329,59 @@ export default function GenerateScreen() {
                     Baixar
                   </Text>
                 </Pressable>
+
+                {/* Share Button */}
                 <Pressable
-                  onPress={handleGenerate}
-                  disabled={isGenerating}
+                  onPress={handleShare}
+                  disabled={isSharing}
                   style={({ pressed }) => [
                     {
                       flex: 1,
-                      backgroundColor: colors.primary,
+                      backgroundColor: "#1DA1F2", // Twitter blue for social feel
                       paddingVertical: 14,
                       borderRadius: 12,
                       alignItems: "center",
                       flexDirection: "row",
                       justifyContent: "center",
-                      opacity: pressed ? 0.8 : isGenerating ? 0.5 : 1,
+                      opacity: pressed ? 0.8 : isSharing ? 0.5 : 1,
                     },
                   ]}
                 >
-                  <IconSymbol name="sparkles" size={20} color="#FFFFFF" />
-                  <Text className="text-white font-semibold ml-2">
-                    Regenerar
-                  </Text>
+                  {isSharing ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <IconSymbol name="square.and.arrow.up" size={20} color="#FFFFFF" />
+                      <Text className="text-white font-semibold ml-2">
+                        Compartilhar
+                      </Text>
+                    </>
+                  )}
                 </Pressable>
               </View>
+
+              {/* Regenerate Button */}
+              <Pressable
+                onPress={handleGenerate}
+                disabled={isGenerating}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: colors.primary,
+                    paddingVertical: 14,
+                    borderRadius: 12,
+                    alignItems: "center",
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    opacity: pressed ? 0.8 : isGenerating ? 0.5 : 1,
+                    marginTop: 12,
+                  },
+                ]}
+              >
+                <IconSymbol name="sparkles" size={20} color="#FFFFFF" />
+                <Text className="text-white font-semibold ml-2">
+                  Regenerar
+                </Text>
+              </Pressable>
             </View>
           )}
 
