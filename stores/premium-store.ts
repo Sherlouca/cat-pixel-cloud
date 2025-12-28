@@ -26,19 +26,19 @@ export const SUBSCRIPTION_PLANS = {
   monthly: {
     id: "cats_premium_monthly",
     name: "Mensal",
-    price: "R$ 4,90",
-    priceValue: 4.9,
+    price: "R$ 1,99",
+    priceValue: 1.99,
     period: "mês",
     description: "Cobrado mensalmente",
   },
   yearly: {
     id: "cats_premium_yearly",
     name: "Anual",
-    price: "R$ 29,90",
-    priceValue: 29.9,
+    price: "R$ 9,90",
+    priceValue: 9.9,
     period: "ano",
-    description: "Economize 49%",
-    savings: "49%",
+    description: "Economize 58%",
+    savings: "58%",
   },
 };
 

@@ -61,3 +61,16 @@
 - [x] Tela de assinatura premium (Cats Premium)
 - [x] Integração de anúncios (AdMob) para versão gratuita
 - [x] Paywall para recursos premium
+
+## Monetização Avançada
+- [ ] Google Play Billing - Integração de pagamentos reais
+  - [ ] Instalar expo-in-app-purchases
+  - [ ] Criar lib/billing.ts
+  - [ ] Criar hooks/use-purchases.ts
+  - [ ] Integrar com premium-store.ts
+  - [ ] Atualizar tela premium.tsx
+  - [ ] Validação de recibos no servidor
+  - [ ] Implementar restaurar compras
+- [ ] AdMob real - Substituir banner placeholder
+- [ ] Anúncios recompensados - Assistir para ganhar geração extra
+- [ ] Cupons promocionais - Sistema de códigos de desconto
