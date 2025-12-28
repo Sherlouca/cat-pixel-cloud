@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, favorites, InsertFavorite } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,56 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Favorites functions
+export async function getUserFavorites(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get favorites: database not available");
+    return [];
+  }
+
+  return db.select().from(favorites).where(eq(favorites.userId, userId));
+}
+
+export async function addFavorite(
+  userId: number,
+  data: { wallpaperId: string; wallpaperUrl: string; thumbnailUrl: string }
+) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  // Check if already favorited
+  const existing = await db
+    .select()
+    .from(favorites)
+    .where(and(eq(favorites.userId, userId), eq(favorites.wallpaperId, data.wallpaperId)))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return { success: true, message: "Already favorited" };
+  }
+
+  await db.insert(favorites).values({
+    userId,
+    wallpaperId: data.wallpaperId,
+    wallpaperUrl: data.wallpaperUrl,
+    thumbnailUrl: data.thumbnailUrl,
+  });
+
+  return { success: true };
+}
+
+export async function removeFavorite(userId: number, wallpaperId: string) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  await db
+    .delete(favorites)
+    .where(and(eq(favorites.userId, userId), eq(favorites.wallpaperId, wallpaperId)));
+
+  return { success: true };
+}
