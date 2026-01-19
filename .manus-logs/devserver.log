@@ -562,3 +562,26 @@
 [2026-01-19T18:18:41.576Z] [0] 1:18:41 PM [tsx] unlink in ./shared/const.ts Restarting...
 [2026-01-19T18:18:41.682Z] [0] c
 [2026-01-19T18:18:41.683Z] [1] › Detected a change in babel.config.js. Restart the server to see the new results. You may need to clear the bundler cache with the --clear flag for your changes to take effect.
+[2026-01-19T21:12:18.619Z] [0] 4:12:18 PM [tsx] unlink in ./shared/const.ts Restarting...
+[2026-01-19T21:12:18.881Z] [0] c
+[2026-01-19T21:12:18.882Z] [0] node:internal/modules/run_main:122
+[2026-01-19T21:12:18.882Z] [0]     triggerUncaughtException(
+[2026-01-19T21:12:18.883Z] [0]     ^
+[2026-01-19T21:12:18.883Z] [0] Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/ubuntu/cats-wallpaper/server/_core/index.ts' imported from /home/ubuntu/cats-wallpaper/
+[2026-01-19T21:12:18.884Z] [0]     at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+[2026-01-19T21:12:18.884Z] [0]     at moduleResolve (node:internal/modules/esm/resolve:932:10)
+[2026-01-19T21:12:18.884Z] [0]     at defaultResolve (node:internal/modules/esm/resolve:1056:11)
+[2026-01-19T21:12:18.885Z] [0]     at nextResolve (node:internal/modules/esm/hooks:748:28)
+[2026-01-19T21:12:18.885Z] [0]     at resolveBase (file:///home/ubuntu/cats-wallpaper/node_modules/tsx/dist/esm/index.mjs?1768857138778:2:3744)
+[2026-01-19T21:12:18.885Z] [0]     at resolveDirectory (file:///home/ubuntu/cats-wallpaper/node_modules/tsx/dist/esm/index.mjs?1768857138778:2:4243)
+[2026-01-19T21:12:18.886Z] [0]     at resolveTsPaths (file:///home/ubuntu/cats-wallpaper/node_modules/tsx/dist/esm/index.mjs?1768857138778:2:4984)
+[2026-01-19T21:12:18.886Z] [0]     at resolve (file:///home/ubuntu/cats-wallpaper/node_modules/tsx/dist/esm/index.mjs?1768857138778:2:5361)
+[2026-01-19T21:12:18.887Z] [0]     at nextResolve (node:internal/modules/esm/hooks:748:28)
+[2026-01-19T21:12:18.887Z] [0]     at Hooks.resolve (node:internal/modules/esm/hooks:240:30) {
+[2026-01-19T21:12:18.887Z] [0]   code: 'ERR_MODULE_NOT_FOUND',
+[2026-01-19T21:12:18.888Z] [0]   url: 'file:///home/ubuntu/cats-wallpaper/server/_core/index.ts'
+[2026-01-19T21:12:18.888Z] [0] }
+[2026-01-19T21:12:18.888Z] [0]
+[2026-01-19T21:12:18.889Z] [0] Node.js v22.13.0
+[2026-01-19T21:12:19.484Z] [1] › Detected a change in babel.config.js. Restart the server to see the new results. You may need to clear the bundler cache with the --clear flag for your changes to take effect.
+[2026-01-19T21:12:21.511Z] [1] › Detected a change in metro.config.js. Restart the server to see the new results.
